@@ -1,22 +1,74 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, ChevronDown } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { setBook, setUrl } from "../../utils/bookSlice";
+import { useNavigate } from "react-router-dom";
 
-const categories = ["Title", "Author", "Year", "Genre"];
-
-const mockSuggestions = {
-  Title: ["The Great Gatsby", "To Kill a Mockingbird", "Pride and Prejudice"],
-  Author: ["F. Scott Fitzgerald", "Harper Lee", "Jane Austen"],
-  Year: ["1925", "1960", "1813"],
-  Genre: ["Novel", "Fiction", "Classic"],
-};
+const categories = ["Title", "Author", "Genre"];
 
 export default function SearchBar() {
   const [category, setCategory] = useState("Title");
+  const data = useSelector((state) => state.book.book);
   const [query, setQuery] = useState("");
+  const [urlQuery, setUrlQuery] = useState();
+  const [booksMatch, setBooksMatch] = useState();
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const searchBarRef = useRef(null);
+  const dispatch = useDispatch();
+
+  const navigate = useNavigate();
+
+  const debouncedSearch = useRef(
+    debounce((q) => searchResult(q), 1000)
+  ).current;
+
+  async function searchResult(q) {
+    let query = "";
+    for (let i of q) {
+      if (i === " ") {
+        query += "+";
+      } else if (i === ".") {
+        query += "%20";
+      } else if (i === "'") {
+        query += "%27";
+      } else if (i) {
+        query += i;
+      }
+    }
+
+    let res, data;
+    if (query) {
+      if (category === "Title") {
+        console.log(query);
+        res = await fetch(
+          `https://openlibrary.org/search.json?q=${query}&limit=10`
+        );
+      } else if (category === "Author") {
+        console.log(query);
+        res = await fetch(
+          `https://openlibrary.org/search.json?author=${query}&limit=10`
+        );
+      } else if (category === "Genre") {
+        console.log(query);
+        res = await fetch(
+          `https://openlibrary.org/search.json?subject=${query}&limit=10`
+        );
+      }
+      data = await res.json();
+
+      setBooksMatch(data);
+    }
+  }
+
+  function debounce(fn, delay) {
+    let timeout;
+    return function (...args) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -36,16 +88,26 @@ export default function SearchBar() {
   }, []);
 
   useEffect(() => {
-    if (query.length > 0) {
-      const filteredSuggestions = mockSuggestions[category].filter(
-        (suggestion) => suggestion.toLowerCase().includes(query.toLowerCase())
-      );
+    if (query.length > 0 && booksMatch) {
+      let filteredSuggestions;
+      if (category === "Genre" || category === "Author") {
+        filteredSuggestions = booksMatch.docs.map(
+          (suggestion) => suggestion.title
+        );
+      } else {
+        filteredSuggestions = booksMatch.docs.map((suggestion) => {
+          if (suggestion.title.toLowerCase().includes(query.toLowerCase())) {
+            return suggestion.title;
+          }
+        });
+      }
+
       setSuggestions(filteredSuggestions);
       setShowSuggestions(true);
     } else {
       setShowSuggestions(false);
     }
-  }, [query, category]);
+  }, [category, booksMatch]);
 
   const handleCategoryChange = (newCategory) => {
     setCategory(newCategory);
@@ -54,11 +116,27 @@ export default function SearchBar() {
 
   const handleQueryChange = (e) => {
     setQuery(e.target.value);
+    debouncedSearch(e.target.value);
   };
 
   const handleSuggestionClick = (suggestion) => {
-    setQuery(suggestion);
+    let q = "";
+    for (let i of suggestion) {
+      if (i === " ") {
+        q += "+";
+      } else if (i === ".") {
+        q += "%20";
+      } else if (i === "'") {
+        q += "%27";
+      } else if (i) {
+        q += i;
+      }
+    }
+    setQuery("");
     setShowSuggestions(false);
+    dispatch(setBook(suggestion));
+    dispatch(setUrl(q));
+    navigate("/list");
   };
 
   return (

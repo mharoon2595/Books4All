@@ -1,16 +1,27 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { addData, fetchData } from "../../utils/firebase/fetchDB";
+import { increaseCart, decreaseCart } from "../../utils/checkoutSlice";
+import { useSelector, useDispatch } from "react-redux";
+import { pushId } from "../../utils/idSlice";
+import swal from "sweetalert";
+import { useNavigate } from "react-router-dom";
 
 const categories = [
-  { id: "classic", name: "Classics", subject: "classics" },
+  { id: "classic", name: "Classic", subject: "classics" },
   { id: "fantasy", name: "Fantasy", subject: "fantasy" },
-  { id: "thrillers", name: "Thrillers", subject: "thrillers" },
+  { id: "thrillers", name: "Thriller", subject: "thrillers" },
   { id: "nonfiction", name: "Non-Fiction", subject: "nonfiction" },
 ];
 
-const BookCarousel = ({ books, category }) => {
+const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [slidesToShow, setSlidesToShow] = useState(1);
+  const loggedIn = useSelector((state) => state.status.signedIn);
+  const cart = useSelector((state) => state.checkout.cart);
+  const booksList = useSelector((state) => state.checkout.books);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const updateSlidesToShow = () => {
     if (window.innerWidth >= 1024) {
@@ -25,6 +36,13 @@ const BookCarousel = ({ books, category }) => {
   useEffect(() => {
     updateSlidesToShow(); // Initial calculation
     window.addEventListener("resize", updateSlidesToShow); // Adjust on resize
+
+    (async () => {
+      let obj = await fetchData();
+      setFlag(true);
+      setBookCount(obj);
+      dispatch(pushId(obj));
+    })();
 
     return () => {
       window.removeEventListener("resize", updateSlidesToShow); // Clean up on unmount
@@ -52,7 +70,9 @@ const BookCarousel = ({ books, category }) => {
 
   return (
     <div className="relative mb-8">
-      <h2 className="text-2xl font-bold mb-4">{category}</h2>
+      <h2 className="text-2xl font-bold mb-4">
+        Popular {category.toLowerCase()} books
+      </h2>
       <div className="overflow-hidden">
         <div
           className="flex transition-transform duration-300 ease-in-out"
@@ -63,24 +83,64 @@ const BookCarousel = ({ books, category }) => {
           {books.map((book) => (
             <div
               key={book.key}
-              className="w-1/2 md:w-1/4 lg:w-1/5 flex-shrink-0 px-2"
+              className="w-1/2 md:w-1/4 lg:w-1/5 max-h-[500px] flex-shrink-0 px-2"
             >
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="bg-white rounded-lg shadow-md h-full overflow-hidden">
                 <img
                   src={`https://covers.openlibrary.org/b/id/${book.cover_id}-M.jpg`}
                   alt={`Cover of ${book.title}`}
-                  className="w-full h-64 object-cover"
+                  className="w-full h-1/2 object-cover"
                 />
-                <div className="p-4">
+                <div className="flex flex-col justify-between p-4 h-1/2">
                   <h3 className="font-semibold text-lg mb-2 line-clamp-2">
                     {book.title}
                   </h3>
                   <p className="text-sm text-gray-600 line-clamp-1 mb-2">
                     {book.authors?.map((author) => author.name).join(", ")}
                   </p>
-                  <button className="w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
-                    {book.availability || "Check Availability"}
-                  </button>
+                  <section>
+                    <button className="w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                      Copies: {book.availability || "Check Availability"}
+                    </button>
+                    <button
+                      className={`w-full py-2 px-4 ${
+                        book.availability > 0 ? "bg-green-400" : "bg-gray-500"
+                      } text-white rounded hover:bg-green-500 transition-colors mt-2`}
+                      disabled={!book.availability ? true : false}
+                      onClick={() => {
+                        if (!loggedIn) {
+                          navigate("/login");
+                        } else if (
+                          cart < 5 &&
+                          !booksList.includes(book.title)
+                        ) {
+                          console.log(book.title);
+                          dispatch(increaseCart(book.title));
+                          swal(
+                            "Alright!",
+                            "Your book has been added to cart!",
+                            "success"
+                          );
+                        } else {
+                          if (booksList.includes(book.title)) {
+                            swal(
+                              "Oops!",
+                              "You already have a copy of this book!",
+                              "error"
+                            );
+                          } else if (cart === 5) {
+                            swal(
+                              "Oops!",
+                              "Only a maximum of 5 books can be borrowed at a time!",
+                              "error"
+                            );
+                          }
+                        }
+                      }}
+                    >
+                      {book.availability > 0 ? "Borrow" : "No copies"}
+                    </button>
+                  </section>
                 </div>
               </div>
             </div>
@@ -109,11 +169,14 @@ export default function BookLibrary() {
   const [books, setBooks] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [bookCount, setBookCount] = useState();
+  const [flag, setFlag] = useState(false);
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
         const categoryPromises = categories.map(async (category) => {
+          let genre = category.id;
           const response = await fetch(
             `https://openlibrary.org/subjects/${category.subject}.json?limit=10`
           );
@@ -122,16 +185,20 @@ export default function BookLibrary() {
           const data = await response.json();
           return {
             category: category.id,
-            books: data.works.map((book) => ({
-              ...book,
-              availability: [
-                "Not in Library",
-                "Checked Out",
-                "Join Waitlist",
-                "Borrow",
-                "Read",
-              ][Math.floor(Math.random() * 5)],
-            })),
+            books: data.works.map((book) => {
+              let count =
+                bookCount && bookCount[book.title]
+                  ? bookCount[book.title][0]
+                  : 0;
+              let rand = Math.floor(Math.random() * 50);
+              if (!count && flag) {
+                addData(book.title, book.authors[0].name, genre, rand);
+              }
+              return {
+                ...book,
+                availability: count ? count : "Fetching",
+              };
+            }),
           };
         });
 
@@ -151,7 +218,7 @@ export default function BookLibrary() {
     };
 
     fetchBooks();
-  }, []);
+  }, [flag, bookCount]);
 
   if (loading) return <div className="text-center py-10">Loading books...</div>;
   if (error)
@@ -164,6 +231,8 @@ export default function BookLibrary() {
           key={category.id}
           books={books[category.id] || []}
           category={category.name}
+          setBookCount={setBookCount}
+          setFlag={setFlag}
         />
       ))}
     </div>

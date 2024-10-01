@@ -1,7 +1,11 @@
 import React, { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { Menu, X, LogIn, UserPlus } from "lucide-react";
 import SearchBar from "./SearchBar";
 import Logo from "../../assets/Books4All.png";
+import { register } from "../../utils/signedInSlice.js";
+import { useNavigate } from "react-router-dom";
+import { ShoppingCart, User } from "lucide-react";
 
 const NavLink = ({ href, children }) => (
   <a
@@ -14,6 +18,12 @@ const NavLink = ({ href, children }) => (
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const signIn = useSelector((state) => state.status.register);
+  const loggedIn = useSelector((state) => state.status.signedIn);
+  const username = useSelector((state) => state.status.username);
+  const cart = useSelector((state) => state.checkout.cart);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   return (
     <nav className="bg-white shadow-lg">
@@ -21,7 +31,12 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <img className="h-8 w-auto" src={Logo} alt="Logo" />
+              <img
+                className="h-8 w-auto hover:cursor-pointer"
+                src={Logo}
+                alt="Logo"
+                onClick={() => navigate("/")}
+              />
             </div>
             {/* <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-4">
@@ -33,18 +48,67 @@ export default function Navbar() {
             </div> */}
           </div>
           <SearchBar />
-          <div className="hidden md:block">
-            <div className="ml-4 flex items-center md:ml-6">
-              <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded inline-flex items-center">
-                <LogIn className="h-4 w-4 mr-2" />
-                <span>Login</span>
-              </button>
-              <button className="ml-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center">
-                <UserPlus className="h-4 w-4 mr-2" />
-                <span>Register</span>
-              </button>
-            </div>
-          </div>
+          {!loggedIn ? (
+            <>
+              <div className="hidden md:block">
+                <div className="ml-4 flex items-center md:ml-6">
+                  <button
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded inline-flex items-center"
+                    onClick={() => {
+                      dispatch(register(true));
+                      navigate("/login");
+                    }}
+                  >
+                    <LogIn className="h-4 w-4 mr-2" />
+                    <span>Login</span>
+                  </button>
+                  <button
+                    className="ml-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center"
+                    onClick={() => {
+                      dispatch(register(false));
+                      navigate("/login");
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    <span>Register</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="ml-4 flex items-center md:ml-6">
+                <button
+                  className="relative bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded inline-flex items-center"
+                  onClick={() => {
+                    navigate("/checkout");
+                  }}
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  <span>Cart</span>
+                  <div
+                    className={`${
+                      cart === 0
+                        ? "hidden"
+                        : "absolute -top-2 -right-2 bg-red-500 w-5 h-5 text-xs text-white font-semibold flex justify-center items-center rounded-full"
+                    }`}
+                  >
+                    {cart}
+                  </div>
+                </button>
+                <button
+                  className="ml-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center"
+                  onClick={() => {
+                    dispatch(register(false));
+                    navigate("/login");
+                  }}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  <span>Hello {username}!</span>
+                </button>
+              </div>
+            </>
+          )}
           <div className="-mr-2 flex md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -74,13 +138,25 @@ export default function Navbar() {
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
             <div className="flex items-center px-5">
-              <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded inline-flex items-center w-full justify-center">
+              <button
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded inline-flex items-center w-full justify-center"
+                onClick={() => {
+                  dispatch(register(true));
+                  navigate("/login");
+                }}
+              >
                 <LogIn className="h-4 w-4 mr-2" />
                 <span>Login</span>
               </button>
             </div>
             <div className="mt-3 px-5">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center w-full justify-center">
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded inline-flex items-center w-full justify-center"
+                onClick={() => {
+                  dispatch(register(false));
+                  navigate("/login");
+                }}
+              >
                 <UserPlus className="h-4 w-4 mr-2" />
                 <span>Register</span>
               </button>
