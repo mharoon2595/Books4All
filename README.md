@@ -5,6 +5,7 @@
 ## Features
 
 - **State Management**: The application utilizes **Redux Toolkit** for efficient and scalable global state management.
+- **Debounced Search Bar**: Applied debouncing for limiting the load on the server.
 - **Responsive Styling**: Designed with **Tailwind CSS**, ensuring a sleek, modern, and responsive user interface.
 - **Loading Experience**: Implements a **shimmer effect** while loading content, offering a smooth visual experience during data fetching.
 - **Infinite Scrolling**: Users can browse search results effortlessly with **infinite scrolling**, enhancing the overall user experience.
