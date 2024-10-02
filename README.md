@@ -22,23 +22,23 @@ Books4All is a user-friendly library management website that allows users to man
 
 To run this project locally, follow these steps:
 
-1.Clone the repository:
+1. Clone the repository:
   ```bash
   git clone https://github.com/your-username/books4all.git
   ```
 
-2.Navigate to the project directory:
+2. Navigate to the project directory:
   ```bash
    cd books4all
    ```
-3.Install the dependencies:
+3. Install the dependencies:
   ```bash
   npm install
   ```
 
-4.Set up Firebase credentials and API keys for Open Library in a `.env` file.
+4. Set up Firebase credentials and API keys for Open Library in a `.env` file.
 
-5.Run the application:
+5. Run the application:
   ```bash
   npm start
   ```
