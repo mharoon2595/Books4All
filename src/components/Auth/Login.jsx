@@ -62,6 +62,7 @@ const UserLogin = () => {
       dispatch(pushUserId(data[1]));
       if (data[0]) {
         await swal("Alright!", "You are now signed in!", "success");
+        localStorage.setItem("user", username);
         dispatch(toggleSignIn(true));
         dispatch(setUsername(username));
         navigate("/");
@@ -93,7 +94,7 @@ const UserLogin = () => {
     setIsLoading(true);
 
     try {
-      const data = await addData(username, password);
+      await addData(username, password);
       await swal(
         "Alright!",
         "Registered successfully! Please login now",
@@ -117,7 +118,7 @@ const UserLogin = () => {
 
   return (
     <>
-      <div className="flex h-[calc(100vh-96px)] justify-center items-center ">
+      <div className="flex h-[90vh] justify-center items-center ">
         <div className="h-[70%] w-[60%] md:max-w-[30%]">
           <div className="relative border-[3px] border-black flex flex-col items-center gap-3 px-4  py-5 rounded-md text-base md:text-xl lg:text-2xl">
             {isLoading && <LoadingSpinner asOverlay />}

@@ -1,6 +1,6 @@
 import { collection, getDocs, addDoc } from "firebase/firestore";
 import { db } from "../../../db/firebase";
-import { arrayUnion } from "firebase/firestore";
+import { arrayUnion, arrayRemove } from "firebase/firestore";
 import { doc, updateDoc } from "firebase/firestore";
 
 export const fetchData = async (username, password) => {
@@ -18,7 +18,7 @@ export const fetchData = async (username, password) => {
   for (let i of result) {
     obj = { ...obj, ...i };
   }
-  console.log("obj--->", obj);
+
   return [userFound, obj];
 };
 
@@ -47,3 +47,28 @@ export async function addBook(userId, book) {
     console.error("Error updating document: ", error);
   }
 }
+
+export async function removeBook(userId, book) {
+  const userDocRef = doc(db, "users", userId);
+
+  try {
+    await updateDoc(userDocRef, {
+      books: arrayRemove(book),
+    });
+    console.log("Document removed successfully!");
+  } catch (error) {
+    console.error("Error updating document: ", error);
+  }
+}
+
+export const fetchBooks = async (username) => {
+  const querySnapshot = await getDocs(collection(db, "users"));
+  let ans = [];
+  querySnapshot.docs.forEach((doc) => {
+    if (doc.data().username === username) {
+      ans = [...doc.data().books];
+    }
+  });
+
+  return ans;
+};

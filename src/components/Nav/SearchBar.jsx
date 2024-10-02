@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search, ChevronDown, Loader } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setBook, setUrl } from "../../utils/bookSlice";
 import { useNavigate } from "react-router-dom";
@@ -10,55 +10,51 @@ export default function SearchBar() {
   const [category, setCategory] = useState("Title");
   const data = useSelector((state) => state.book.book);
   const [query, setQuery] = useState("");
-  const [urlQuery, setUrlQuery] = useState();
   const [booksMatch, setBooksMatch] = useState();
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const searchBarRef = useRef(null);
   const dispatch = useDispatch();
-
   const navigate = useNavigate();
 
-  const debouncedSearch = useRef(
-    debounce((q) => searchResult(q), 1000)
-  ).current;
+  const debouncedSearch = useRef(debounce((q) => searchResult(q), 300)).current;
 
   async function searchResult(q) {
-    let query = "";
-    for (let i of q) {
-      if (i === " ") {
-        query += "+";
-      } else if (i === ".") {
-        query += "%20";
-      } else if (i === "'") {
-        query += "%27";
-      } else if (i) {
-        query += i;
-      }
+    if (!q) {
+      setIsLoading(false);
+      return;
     }
 
-    let res, data;
-    if (query) {
+    setIsLoading(true);
+    const query = q
+      .replace(/\s+/g, "+")
+      .replace(/\./g, "%20")
+      .replace(/'/g, "%27");
+    let res;
+
+    try {
       if (category === "Title") {
-        console.log(query);
         res = await fetch(
           `https://openlibrary.org/search.json?q=${query}&limit=10`
         );
       } else if (category === "Author") {
-        console.log(query);
         res = await fetch(
           `https://openlibrary.org/search.json?author=${query}&limit=10`
         );
       } else if (category === "Genre") {
-        console.log(query);
         res = await fetch(
           `https://openlibrary.org/search.json?subject=${query}&limit=10`
         );
       }
-      data = await res.json();
 
+      const data = await res.json();
       setBooksMatch(data);
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -89,25 +85,15 @@ export default function SearchBar() {
 
   useEffect(() => {
     if (query.length > 0 && booksMatch) {
-      let filteredSuggestions;
-      if (category === "Genre" || category === "Author") {
-        filteredSuggestions = booksMatch.docs.map(
-          (suggestion) => suggestion.title
-        );
-      } else {
-        filteredSuggestions = booksMatch.docs.map((suggestion) => {
-          if (suggestion.title.toLowerCase().includes(query.toLowerCase())) {
-            return suggestion.title;
-          }
-        });
-      }
-
+      const filteredSuggestions = booksMatch.docs
+        .map((suggestion) => suggestion.title)
+        .filter((title) => title.toLowerCase().includes(query.toLowerCase()));
       setSuggestions(filteredSuggestions);
       setShowSuggestions(true);
     } else {
       setShowSuggestions(false);
     }
-  }, [category, booksMatch]);
+  }, [query, booksMatch]);
 
   const handleCategoryChange = (newCategory) => {
     setCategory(newCategory);
@@ -120,18 +106,10 @@ export default function SearchBar() {
   };
 
   const handleSuggestionClick = (suggestion) => {
-    let q = "";
-    for (let i of suggestion) {
-      if (i === " ") {
-        q += "+";
-      } else if (i === ".") {
-        q += "%20";
-      } else if (i === "'") {
-        q += "%27";
-      } else if (i) {
-        q += i;
-      }
-    }
+    const q = suggestion
+      .replace(/\s+/g, "+")
+      .replace(/\./g, "%20")
+      .replace(/'/g, "%27");
     setQuery("");
     setShowSuggestions(false);
     dispatch(setBook(suggestion));
@@ -140,25 +118,25 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="max-w-2xl mx-5 p-4" ref={searchBarRef}>
+    <div className="w-full" ref={searchBarRef}>
       <div className="relative">
         <div className="flex">
           <div className="relative">
             <button
               onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-              className="flex items-center justify-between w-32 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="flex items-center justify-between w-24 sm:w-32 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               {category}
-              <ChevronDown className="w-4 h-4 ml-2" />
+              <ChevronDown className="w-4 h-4 ml-1 sm:ml-2" />
             </button>
             {showCategoryDropdown && (
-              <div className="absolute z-10 w-32 mt-1 bg-white rounded-md shadow-lg">
+              <div className="absolute z-10 w-24 sm:w-32 mt-1 bg-white rounded-md shadow-lg">
                 <ul className="py-1">
                   {categories.map((cat) => (
                     <li
                       key={cat}
                       onClick={() => handleCategoryChange(cat)}
-                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
                       {cat}
                     </li>
@@ -171,21 +149,25 @@ export default function SearchBar() {
             type="text"
             value={query}
             onChange={handleQueryChange}
-            className="flex-1 px-4 py-2 text-sm text-gray-700 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             placeholder={`Search by ${category.toLowerCase()}...`}
           />
-          <button className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            <Search className="w-5 h-5" />
+          <button className="px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            {isLoading ? (
+              <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+            ) : (
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+            )}
           </button>
         </div>
         {showSuggestions && suggestions.length > 0 && (
           <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg">
-            <ul className="py-1">
+            <ul className="py-1 max-h-60 overflow-auto">
               {suggestions.map((suggestion, index) => (
                 <li
                   key={index}
                   onClick={() => handleSuggestionClick(suggestion)}
-                  className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                  className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
                 >
                   {suggestion}
                 </li>

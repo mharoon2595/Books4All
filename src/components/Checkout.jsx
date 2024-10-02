@@ -29,7 +29,7 @@ const Checkout = () => {
   return (
     <div className="flex flex-col justify-center items-center  my-3 p-3">
       <p className="text-2xl font-semibold">Checkout</p>
-      {cart &&
+      {cart.length > 0 ? (
         cart.map((items) => {
           return (
             <div
@@ -45,7 +45,10 @@ const Checkout = () => {
               />
             </div>
           );
-        })}
+        })
+      ) : (
+        <p className="my-3 text-lg">Cart is empty right now.</p>
+      )}
 
       <button
         className="bg-green-500 rounded-lg p-3 text-lg hover:scale-110"

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addData, fetchData } from "../../utils/firebase/fetchDB";
-import { increaseCart, decreaseCart } from "../../utils/checkoutSlice";
+import { increaseCart } from "../../utils/checkoutSlice";
 import { useSelector, useDispatch } from "react-redux";
 import { pushId } from "../../utils/idSlice";
 import swal from "sweetalert";
 import { useNavigate } from "react-router-dom";
+import { fetchBooks } from "../../utils/firebase/userActions";
 
 const categories = [
   { id: "classic", name: "Classic", subject: "classics" },
@@ -14,16 +15,32 @@ const categories = [
   { id: "nonfiction", name: "Non-Fiction", subject: "nonfiction" },
 ];
 
+const ShimmerEffect = () => (
+  <div className="animate-pulse flex space-x-4">
+    <div className="flex-1 space-y-6 py-1">
+      <div className="h-60 bg-slate-200 rounded"></div>
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="h-2 bg-slate-200 rounded col-span-2"></div>
+          <div className="h-2 bg-slate-200 rounded col-span-1"></div>
+        </div>
+        <div className="h-2 bg-slate-200 rounded"></div>
+      </div>
+    </div>
+  </div>
+);
+
 const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [slidesToShow, setSlidesToShow] = useState(1);
   const loggedIn = useSelector((state) => state.status.signedIn);
+  const user = useSelector((state) => state.status.username);
   const cart = useSelector((state) => state.checkout.cart);
   const booksList = useSelector((state) => state.checkout.books);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const updateSlidesToShow = () => {
+  const updateSlidesToShow = useCallback(() => {
     if (window.innerWidth >= 1024) {
       setSlidesToShow(5);
     } else if (window.innerWidth >= 768) {
@@ -31,11 +48,42 @@ const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
     } else {
       setSlidesToShow(2);
     }
+  }, []);
+
+  const checkoutFn = async (book) => {
+    if (!loggedIn) {
+      navigate("/login");
+    }
+    try {
+      const ans = await fetchBooks(user);
+      if (
+        !booksList.includes(book.title) &&
+        !ans.includes(book.title) &&
+        ans.length + cart < 5
+      ) {
+        console.log(book.title);
+        dispatch(increaseCart(book.title));
+        swal("Alright!", "Your book has been added to cart!", "success");
+      } else {
+        if (booksList.includes(book.title) || ans.includes(book.title)) {
+          swal("Oops!", "You already have a copy of this book!", "error");
+        } else if (ans.length + cart === 5) {
+          swal(
+            "Oops!",
+            "Only a maximum of 5 books can be borrowed at a time!",
+            "error"
+          );
+        }
+      }
+    } catch (err) {
+      console.log(err);
+      swal("Oops!", "Something went wrong, please try again later", "error");
+    }
   };
 
   useEffect(() => {
-    updateSlidesToShow(); // Initial calculation
-    window.addEventListener("resize", updateSlidesToShow); // Adjust on resize
+    updateSlidesToShow();
+    window.addEventListener("resize", updateSlidesToShow);
 
     (async () => {
       let obj = await fetchData();
@@ -45,15 +93,14 @@ const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
     })();
 
     return () => {
-      window.removeEventListener("resize", updateSlidesToShow); // Clean up on unmount
+      window.removeEventListener("resize", updateSlidesToShow);
     };
-  }, []);
+  }, [updateSlidesToShow, setFlag, setBookCount, dispatch]);
 
   const nextSlide = useCallback(() => {
     setCurrentIndex((prevIndex) => {
-      // Prevent moving beyond the last visible set of slides
       if (prevIndex >= books.length - slidesToShow) {
-        return 0; // Go back to the first slide
+        return 0;
       }
       return prevIndex + 1;
     });
@@ -62,7 +109,7 @@ const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
   const prevSlide = useCallback(() => {
     setCurrentIndex((prevIndex) => {
       if (prevIndex === 0) {
-        return books.length - slidesToShow; // Jump to the last set of slides
+        return books.length - slidesToShow;
       }
       return prevIndex - 1;
     });
@@ -106,37 +153,8 @@ const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
                       className={`w-full py-2 px-4 ${
                         book.availability > 0 ? "bg-green-400" : "bg-gray-500"
                       } text-white rounded hover:bg-green-500 transition-colors mt-2`}
-                      disabled={!book.availability ? true : false}
-                      onClick={() => {
-                        if (!loggedIn) {
-                          navigate("/login");
-                        } else if (
-                          cart < 5 &&
-                          !booksList.includes(book.title)
-                        ) {
-                          console.log(book.title);
-                          dispatch(increaseCart(book.title));
-                          swal(
-                            "Alright!",
-                            "Your book has been added to cart!",
-                            "success"
-                          );
-                        } else {
-                          if (booksList.includes(book.title)) {
-                            swal(
-                              "Oops!",
-                              "You already have a copy of this book!",
-                              "error"
-                            );
-                          } else if (cart === 5) {
-                            swal(
-                              "Oops!",
-                              "Only a maximum of 5 books can be borrowed at a time!",
-                              "error"
-                            );
-                          }
-                        }
-                      }}
+                      disabled={!book.availability}
+                      onClick={() => checkoutFn(book)}
                     >
                       {book.availability > 0 ? "Borrow" : "No copies"}
                     </button>
@@ -220,7 +238,24 @@ export default function BookLibrary() {
     fetchBooks();
   }, [flag, bookCount]);
 
-  if (loading) return <div className="text-center py-10">Loading books...</div>;
+  if (loading)
+    return (
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-gray-100">
+        {categories.map((category) => (
+          <div key={category.id} className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">
+              Popular {category.name.toLowerCase()} books
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, index) => (
+                <ShimmerEffect key={index} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+
   if (error)
     return <div className="text-center py-10 text-red-500">{error}</div>;
 
