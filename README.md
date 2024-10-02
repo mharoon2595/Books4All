@@ -5,7 +5,7 @@ Books4All is a user-friendly library management website that allows users to man
 ## Features
 
 - **State Management**: The application utilizes Redux Toolkit for efficient and scalable global state management.
-- **Responsive Styling**: Designed with Tailwind CSS, ensuring a sleek, modern, and responsive user interface.
+- **Responsive Styling**: Designed with Tailwind CSS, ensuring a sleek, modern and responsive user interface.
 - **Loading Experience**: Implements a shimmer effect while loading content, offering a smooth visual experience during data fetching.
 - **Infinite Scrolling**: Users can browse search results effortlessly with infinite scrolling, enhancing the overall user experience.
 - **Authentication**: Secure user authentication through Firebase for seamless login and signup.
@@ -22,10 +22,10 @@ Books4All is a user-friendly library management website that allows users to man
 
 To run this project locally, follow these steps:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/books4all.git
-   ```
+1.Clone the repository:
+  ```bash
+  git clone https://github.com/your-username/books4all.git
+  ```
 
 2.Navigate to the project directory:
   ```bash
