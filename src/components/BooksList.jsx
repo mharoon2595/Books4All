@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import { increaseCart } from "../utils/checkoutSlice";
 import swal from "sweetalert";
 import { fetchBooks } from "../utils/firebase/userActions";
-import FilterTab from "./FilterTab";
 
 const BookSearch = () => {
   const [books, setBooks] = useState([]);
@@ -57,6 +56,7 @@ const BookSearch = () => {
   const checkoutFn = async (book) => {
     if (!loggedIn) {
       navigate("/login");
+      return;
     }
     try {
       const ans = await fetchBooks(user);

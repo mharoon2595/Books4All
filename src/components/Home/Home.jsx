@@ -53,6 +53,7 @@ const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
   const checkoutFn = async (book) => {
     if (!loggedIn) {
       navigate("/login");
+      return;
     }
     try {
       const ans = await fetchBooks(user);
