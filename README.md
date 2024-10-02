@@ -22,15 +22,15 @@
 
 To run this project locally, follow these steps:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/books4all.git
-   ```
+1.Clone the repository:
+ ```bash
+ git clone https://github.com/your-username/books4all.git
+  ```
 
 2.Navigate to the project directory 
-  ```bash
-   cd books4all
-  ```
+ ```bash
+ cd books4all
+ ```
 
 3.Install the dependencies:
  ```bash
