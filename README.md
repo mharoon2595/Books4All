@@ -4,6 +4,7 @@
 
 ## Features
 
+- **Fully responsive**: The website is designed to be fully responsive to ensure functionality across a variety of devices.
 - **State Management**: The application utilizes **Redux Toolkit** for efficient and scalable global state management.
 - **Debounced Search Bar**: Applied debouncing for limiting the load on the server.
 - **Responsive Styling**: Designed with **Tailwind CSS**, ensuring a sleek, modern, and responsive user interface.
