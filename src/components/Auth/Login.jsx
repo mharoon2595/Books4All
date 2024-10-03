@@ -106,7 +106,9 @@ const UserLogin = () => {
         ["username"]: "",
         ["password"]: "",
         ["email"]: "",
+        ["confirmPass"]: "",
       });
+      dispatch(register(true));
     } catch (err) {
       const errorMsg = err.response.data.message;
       setErrMsg(errorMsg);

@@ -83,20 +83,22 @@ const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
   };
 
   useEffect(() => {
-    updateSlidesToShow();
-    window.addEventListener("resize", updateSlidesToShow);
-
     (async () => {
       let obj = await fetchData();
       setFlag(true);
       setBookCount(obj);
       dispatch(pushId(obj));
     })();
+  }, []);
+
+  useEffect(() => {
+    updateSlidesToShow();
+    window.addEventListener("resize", updateSlidesToShow);
 
     return () => {
       window.removeEventListener("resize", updateSlidesToShow);
     };
-  }, [updateSlidesToShow, setFlag, setBookCount, dispatch]);
+  }, [updateSlidesToShow, dispatch]);
 
   const nextSlide = useCallback(() => {
     setCurrentIndex((prevIndex) => {
@@ -209,9 +211,9 @@ export default function BookLibrary() {
                 bookCount && bookCount[book.title]
                   ? bookCount[book.title][0]
                   : 0;
-              let rand = Math.floor(Math.random() * 50);
+              let rand = Math.ceil(Math.random() * 50);
               if (!count && flag) {
-                addData(book.title, book.authors[0].name, genre, rand);
+                addData(book.title, rand);
               }
               return {
                 ...book,
@@ -237,7 +239,7 @@ export default function BookLibrary() {
     };
 
     fetchBooks();
-  }, [flag, bookCount]);
+  }, [flag]);
 
   if (loading)
     return (

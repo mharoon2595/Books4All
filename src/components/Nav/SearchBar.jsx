@@ -127,6 +127,7 @@ export default function SearchBar() {
         .replace(/'/g, "%27");
       dispatch(setBook(query));
       dispatch(setUrl(formattedQuery));
+      setQuery("");
       navigate("/list");
     }
   };
@@ -169,7 +170,7 @@ export default function SearchBar() {
             type="text"
             value={query}
             onChange={handleQueryChange}
-            onKeyPress={handleKeyPress}
+            onKeyUp={handleKeyPress}
             className="flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             placeholder={`Search by ${category.toLowerCase()}...`}
           />

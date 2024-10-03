@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { addData, checkDB, fetchCount } from "../utils/firebase/fetchDB";
+import { setAvailability } from "../utils/firebase/fetchDB";
 import { useNavigate } from "react-router-dom";
 import { increaseCart } from "../utils/checkoutSlice";
 import swal from "sweetalert";
@@ -28,7 +28,7 @@ const BookSearch = () => {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-
+  const [needsFetch, setNeedsFetch] = useState(true);
   const name = useSelector((state) => state.book.book);
   const url = useSelector((state) => state.book.url);
   const loggedIn = useSelector((state) => state.status.signedIn);
@@ -98,35 +98,18 @@ const BookSearch = () => {
   }, [name, page]);
 
   useEffect(() => {
+    if (!needsFetch) return;
     const updateBooks = async () => {
       if (books && books.some((book) => !book.copiesAvailable)) {
-        const updatedBooks = await Promise.all(
-          books.map(async (book) => {
-            if (book.copiesAvailable) {
-              return book;
-            }
+        const bookTitles = books.map((book) => book.title);
+        const availabilityMap = await setAvailability(bookTitles);
 
-            const exists = await checkDB(book.title);
-            let copiesAvailable;
-
-            if (!exists) {
-              const count = Math.floor(Math.random() * 50);
-              await addData(
-                book.title,
-                book.author_name,
-                (book.subjects && book.subjects[0]) || "",
-                count
-              );
-              copiesAvailable = count;
-            } else {
-              copiesAvailable = await fetchCount(book.title);
-            }
-
-            return { ...book, copiesAvailable };
-          })
-        );
-
+        const updatedBooks = books.map((book) => ({
+          ...book,
+          copiesAvailable: availabilityMap[book.title] || 0,
+        }));
         setBooks(updatedBooks);
+        setNeedsFetch(false);
       }
     };
 
@@ -149,6 +132,7 @@ const BookSearch = () => {
         setHasMore(false);
       } else {
         setBooks((prevBooks) => [...prevBooks, ...data.docs]);
+        setNeedsFetch(true);
         updateFilters(data.docs);
       }
     } catch (error) {
@@ -271,7 +255,7 @@ const BookSearch = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredBooks.map((book, index) => (
               <div
-                key={book.key}
+                key={book.cover_i}
                 ref={
                   index === filteredBooks.length - 1 ? lastBookElementRef : null
                 }

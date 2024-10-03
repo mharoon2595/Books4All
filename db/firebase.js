@@ -9,11 +9,11 @@ import { getAnalytics } from "firebase/analytics";
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
-  authDomain: "books4everyone-56eea.firebaseapp.com",
-  projectId: "books4everyone-56eea",
-  storageBucket: "books4everyone-56eea.appspot.com",
-  messagingSenderId: "390244630809",
-  appId: "1:390244630809:web:2f158f7094ae8a71704588",
+  authDomain: "books4all-162ac.firebaseapp.com",
+  projectId: "books4all-162ac",
+  storageBucket: "books4all-162ac.appspot.com",
+  messagingSenderId: "93182197265",
+  appId: "1:93182197265:web:087ab555ef5b3f8076bbb0",
 };
 
 // Initialize Firebase

@@ -1,5 +1,13 @@
 import React from "react";
-import { collection, getDocs, addDoc, increment } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  increment,
+  query,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../../db/firebase";
 
@@ -17,34 +25,71 @@ export const fetchData = async () => {
   return obj;
 };
 
-export const checkDB = async (title) => {
-  const querySnapshot = await getDocs(collection(db, "booksNo"));
-  let ans = false;
-  querySnapshot.docs.forEach((doc) => {
-    if (doc.data().name === title) {
-      ans = true;
+// export const checkDB = async (title) => {
+//   const querySnapshot = await getDocs(collection(db, "booksNo"));
+//   let ans = false;
+//   querySnapshot.docs.forEach((doc) => {
+//     if (doc.data().name === title) {
+//       ans = true;
+//     }
+//   });
+//   return ans;
+// };
+
+// export const fetchCount = async (title) => {
+//   const querySnapshot = await getDocs(collection(db, "booksNo"));
+//   let count;
+//   querySnapshot.docs.forEach((doc) => {
+//     if (doc.data().name === title) {
+//       count = doc.data().number;
+//     }
+//   });
+//   return count;
+// };
+
+export const setAvailability = async (bookTitles) => {
+  const availabilityMap = {};
+  const batchSize = 30;
+  const batches = Math.ceil(bookTitles.length / batchSize);
+
+  for (let i = 0; i < batches; i++) {
+    const batchTitles = bookTitles.slice(i * batchSize, (i + 1) * batchSize);
+    const q = query(
+      collection(db, "booksNo"),
+      where("name", "in", batchTitles)
+    );
+    const querySnapshot = await getDocs(q);
+
+    querySnapshot.forEach((doc) => {
+      availabilityMap[doc.data().name] = doc.data().number;
+    });
+  }
+
+  const batch = writeBatch(db);
+  const missingBooks = [];
+
+  for (let book of bookTitles) {
+    if (!availabilityMap[book]) {
+      let rand = Math.ceil(Math.random() * 50);
+      const newDocRef = doc(collection(db, "booksNo"));
+      batch.set(newDocRef, { name: book, number: rand });
+      availabilityMap[book] = rand;
+      missingBooks.push(book);
     }
-  });
-  return ans;
+  }
+
+  if (missingBooks.length > 0) {
+    await batch.commit();
+    console.log(`Added ${missingBooks.length} new books to the database.`);
+  }
+
+  return availabilityMap;
 };
 
-export const fetchCount = async (title) => {
-  const querySnapshot = await getDocs(collection(db, "booksNo"));
-  let count;
-  querySnapshot.docs.forEach((doc) => {
-    if (doc.data().name === title) {
-      count = doc.data().number;
-    }
-  });
-  return count;
-};
-
-export const addData = async (name, author, genre, number) => {
+export const addData = async (name, number) => {
   try {
     const docRef = await addDoc(collection(db, "booksNo"), {
       name,
-      author,
-      genre,
       number,
     });
     console.log("Document written with ID: ", docRef.id);
