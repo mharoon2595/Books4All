@@ -3,6 +3,7 @@ import { Search, ChevronDown, Loader } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setBook, setUrl } from "../../utils/bookSlice";
 import { useNavigate } from "react-router-dom";
+import swal from "sweetalert";
 
 const categories = ["Title", "Author", "Genre"];
 
@@ -52,7 +53,7 @@ export default function SearchBar() {
       const data = await res.json();
       setBooksMatch(data);
     } catch (error) {
-      console.error("Error fetching suggestions:", error);
+      await swal("An error occured", "Please try searching again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -85,9 +86,10 @@ export default function SearchBar() {
 
   useEffect(() => {
     if (query.length > 0 && booksMatch) {
-      const filteredSuggestions = booksMatch.docs
-        .map((suggestion) => suggestion.title)
-        .filter((title) => title.toLowerCase().includes(query.toLowerCase()));
+      const filteredSuggestions = booksMatch.docs.map(
+        (suggestion) => suggestion.title
+      );
+
       setSuggestions(filteredSuggestions);
       setShowSuggestions(true);
     } else {
@@ -115,6 +117,24 @@ export default function SearchBar() {
     dispatch(setBook(suggestion));
     dispatch(setUrl(q));
     navigate("/list");
+  };
+
+  const handleSearch = () => {
+    if (query) {
+      const formattedQuery = query
+        .replace(/\s+/g, "+")
+        .replace(/\./g, "%20")
+        .replace(/'/g, "%27");
+      dispatch(setBook(query));
+      dispatch(setUrl(formattedQuery));
+      navigate("/list");
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
   return (
@@ -149,10 +169,14 @@ export default function SearchBar() {
             type="text"
             value={query}
             onChange={handleQueryChange}
+            onKeyPress={handleKeyPress}
             className="flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             placeholder={`Search by ${category.toLowerCase()}...`}
           />
-          <button className="px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <button
+            onClick={handleSearch}
+            className="px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-r-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
             {isLoading ? (
               <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
             ) : (
