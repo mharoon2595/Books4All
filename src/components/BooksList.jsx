@@ -138,7 +138,7 @@ const BookSearch = () => {
     let tempBooks = [];
     try {
       const response = await fetch(
-        `https://openlibrary.org/search.json?q=${url}&page=${page}&limit=30`
+        `https://openlibrary.org/search.json?q=${url}&page=${page}&limit=10`
       );
       const data = await response.json();
       if (data.docs.length === 0) {
