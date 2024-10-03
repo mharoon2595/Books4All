@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setAvailability } from "../utils/firebase/fetchDB";
@@ -6,6 +6,16 @@ import { useNavigate } from "react-router-dom";
 import { increaseCart } from "../utils/checkoutSlice";
 import swal from "sweetalert";
 import { fetchBooks } from "../utils/firebase/userActions";
+
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
 
 const BookSearch = () => {
   const [books, setBooks] = useState([]);
@@ -43,11 +53,14 @@ const BookSearch = () => {
     (node) => {
       if (loading) return;
       if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          setPage((prevPage) => prevPage + 1);
-        }
-      });
+      observer.current = new IntersectionObserver(
+        debounce((entries) => {
+          if (entries[0].isIntersecting && hasMore) {
+            setPage((prevPage) => prevPage + 1);
+          }
+        }, 300),
+        { threshold: 1.0 }
+      );
       if (node) observer.current.observe(node);
     },
     [loading, hasMore]
@@ -65,7 +78,6 @@ const BookSearch = () => {
         !ans.includes(book.title) &&
         ans.length + cart < 5
       ) {
-        console.log(book.title);
         dispatch(increaseCart(book.title));
         swal("Alright!", "Your book has been added to cart!", "success");
       } else {
@@ -123,21 +135,23 @@ const BookSearch = () => {
   const fetchAllBooks = async () => {
     if (!hasMore) return;
     setLoading(true);
+    let tempBooks = [];
     try {
       const response = await fetch(
-        `https://openlibrary.org/search.json?q=${url}&page=${page}&limit=10`
+        `https://openlibrary.org/search.json?q=${url}&page=${page}&limit=30`
       );
       const data = await response.json();
       if (data.docs.length === 0) {
         setHasMore(false);
       } else {
-        setBooks((prevBooks) => [...prevBooks, ...data.docs]);
+        tempBooks = [...books, ...data.docs];
         setNeedsFetch(true);
         updateFilters(data.docs);
       }
     } catch (error) {
       console.error("Error fetching books:", error);
     } finally {
+      setBooks(tempBooks);
       setLoading(false);
     }
   };
@@ -228,6 +242,57 @@ const BookSearch = () => {
     <div className="animate-pulse bg-gray-200 rounded-md h-[300px] w-full"></div>
   );
 
+  const BookCard = memo(
+    ({ book, checkoutFn, lastBookElementRef, index, filteredBooksLength }) => (
+      <div
+        key={book.cover_i}
+        ref={index === filteredBooksLength - 1 ? lastBookElementRef : null}
+        className="bg-white p-4 rounded shadow md:h-[300px] flex flex-col justify-between"
+      >
+        <h3 className="font-bold text-lg mb-2">{book.title}</h3>
+        <p className="text-sm text-gray-600 mb-2">
+          {book.author_name ? book.author_name.join(", ") : "Unknown author"}
+        </p>
+        {book.first_publish_year && (
+          <p className="text-sm text-gray-500 mb-2">
+            First published: {book.first_publish_year}
+          </p>
+        )}
+        {book.subject && (
+          <p className="text-xs text-gray-400">
+            Genres: {book.subject.slice(0, 3).join(", ")}
+            {book.subject.length > 3 && "..."}
+          </p>
+        )}
+        {book.copiesAvailable && book.copiesAvailable ? (
+          <>
+            <p className="bg-teal-400 p-3 rounded-lg mt-3 text-center">
+              Copies: {book.copiesAvailable}
+            </p>
+            <button
+              className="bg-green-500 rounded-lg p-3 text-center"
+              onClick={() => checkoutFn(book)}
+            >
+              Borrow
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="bg-teal-400 p-3 rounded-lg mt-3 text-center">
+              No copies
+            </p>
+            <button
+              disabled
+              className="bg-slate-500 rounded-lg p-3 text-center w-full"
+            >
+              Borrow
+            </button>
+          </>
+        )}
+      </div>
+    )
+  );
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col md:flex-row gap-8">
@@ -249,61 +314,21 @@ const BookSearch = () => {
             <span className="font-bold">
               {filteredBooks
                 .map((book) => book.copiesAvailable)
-                .reduce((acc, num) => (acc += num), 0)}
+                .reduce((acc, num) => acc + num, 0)}
             </span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredBooks.map((book, index) => (
-              <div
+              <BookCard
                 key={book.cover_i}
-                ref={
+                book={book}
+                checkoutFn={checkoutFn}
+                lastBookElementRef={
                   index === filteredBooks.length - 1 ? lastBookElementRef : null
                 }
-                className="bg-white p-4 rounded shadow md:h-[300px] flex flex-col justify-between"
-              >
-                <h3 className="font-bold text-lg mb-2">{book.title}</h3>
-                <p className="text-sm text-gray-600 mb-2">
-                  {book.author_name
-                    ? book.author_name.join(", ")
-                    : "Unknown author"}
-                </p>
-                {book.first_publish_year && (
-                  <p className="text-sm text-gray-500 mb-2">
-                    First published: {book.first_publish_year}
-                  </p>
-                )}
-                {book.subject && (
-                  <p className="text-xs text-gray-400">
-                    Genres: {book.subject.slice(0, 3).join(", ")}
-                    {book.subject.length > 3 && "..."}
-                  </p>
-                )}
-                {book.copiesAvailable && book.copiesAvailable ? (
-                  <>
-                    <p className="bg-teal-400 p-3 rounded-lg mt-3 text-center">
-                      Copies:{book.copiesAvailable}
-                    </p>
-                    <button
-                      className="bg-green-500 rounded-lg p-3 text-center"
-                      onClick={() => checkoutFn(book)}
-                    >
-                      Borrow
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="bg-teal-400 p-3 rounded-lg mt-3 text-center">
-                      No copies
-                    </p>
-                    <button
-                      disabled
-                      className="bg-slate-500 rounded-lg p-3 text-center w-full"
-                    >
-                      Borrow
-                    </button>
-                  </>
-                )}
-              </div>
+                index={index}
+                filteredBooksLength={filteredBooks.length}
+              />
             ))}
             {loading && (
               <>
