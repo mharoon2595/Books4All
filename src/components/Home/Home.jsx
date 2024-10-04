@@ -7,6 +7,7 @@ import { pushId } from "../../utils/idSlice";
 import swal from "sweetalert";
 import { useNavigate } from "react-router-dom";
 import { fetchBooks } from "../../utils/firebase/userActions";
+import { register } from "../../utils/signedInSlice";
 
 const categories = [
   { id: "classic", name: "Classic", subject: "classics" },
@@ -53,6 +54,12 @@ const BookCarousel = ({ books, category, setBookCount, setFlag }) => {
   const checkoutFn = async (book) => {
     if (!loggedIn) {
       navigate("/login");
+      swal(
+        "Not signed in!",
+        "You must sign in first before you can borrow books.",
+        "warning"
+      );
+      dispatch(register(true));
       return;
     }
     try {

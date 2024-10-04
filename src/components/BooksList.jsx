@@ -69,6 +69,12 @@ const BookSearch = () => {
   const checkoutFn = async (book) => {
     if (!loggedIn) {
       navigate("/login");
+      swal(
+        "Not signed in!",
+        "You must sign in first before you can borrow books.",
+        "warning"
+      );
+      dispatch(register(true));
       return;
     }
     try {
